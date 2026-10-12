@@ -1,3 +1,4 @@
+
 * {
   box-sizing: border-box;
 }
@@ -36,6 +37,7 @@ body {
   margin: 5vh auto;
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
 header {
@@ -43,34 +45,17 @@ header {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
 }
 
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 0;
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
 }
 
-.message {
-  background: #f1f5f9;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  overflow-wrap: anywhere;
-}
-
-.message p {
-  margin: 8px 0;
-}
-
-.message small,
 header p {
+  margin: 6px 0 0;
   color: #64748b;
-}
-
-.message-form {
-  display: flex;
-  gap: 8px;
 }
 
 input,
@@ -81,12 +66,9 @@ button {
 }
 
 input {
-  border: 1px solid #cbd5e1;
+  width: 100%;
   min-width: 0;
-}
-
-.message-form input {
-  flex: 1;
+  border: 1px solid #cbd5e1;
 }
 
 button {
@@ -99,6 +81,48 @@ button {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.messages {
+  flex: 1;
+  min-height: 100px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.message {
+  max-width: 85%;
+  width: fit-content;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+
+.message.mine {
+  margin-left: auto;
+  background: #dbeafe;
+}
+
+.message p {
+  margin: 8px 0;
+  white-space: pre-wrap;
+}
+
+.message small,
+.empty {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.message-form {
+  display: flex;
+  gap: 8px;
+}
+
+.message-form input {
+  flex: 1;
 }
 
 .online {

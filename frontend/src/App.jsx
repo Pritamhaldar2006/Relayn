@@ -1,57 +1,74 @@
+
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 export default function App() {
   const [username, setUsername] = useState("");
   const [joined, setJoined] = useState(false);
+  const [recipient, setRecipient] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState("Disconnected");
 
   const socketRef = useRef(null);
 
   useEffect(() => {
     if (!joined || !username.trim()) return;
 
-    const socket = new WebSocket("ws://127.0.0.1:8000/ws");
+    const socket = new WebSocket(
+      `ws://127.0.0.1:8000/ws?username=${encodeURIComponent(username.trim())}`
+    );
+
     socketRef.current = socket;
 
-    socket.onopen = () => setConnected(true);
+    socket.onopen = () => setStatus("Connected");
 
     socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMessages((previous) => [...previous, data]);
+      const incoming = JSON.parse(event.data);
+      setMessages((previous) => [...previous, incoming]);
     };
 
-    socket.onclose = () => setConnected(false);
-    socket.onerror = () => setConnected(false);
+    socket.onclose = () => setStatus("Disconnected");
+    socket.onerror = () => setStatus("Connection error");
 
     return () => {
       socket.close();
-      socketRef.current = null;
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
     };
   }, [joined, username]);
 
   function sendMessage(event) {
     event.preventDefault();
 
+    const to = recipient.trim().toLowerCase();
     const text = message.trim();
     const socket = socketRef.current;
 
-    if (!text || !socket || socket.readyState !== WebSocket.OPEN) {
+    if (!to || !text || to === username.trim().toLowerCase()) {
       return;
     }
 
-    socket.send(
-      JSON.stringify({
-        username,
-        text,
-        timestamp: new Date().toLocaleTimeString(),
-      })
-    );
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      setStatus("Not connected");
+      return;
+    }
 
+    socket.send(JSON.stringify({ recipient: to, text }));
     setMessage("");
   }
+
+  const currentUser = username.trim().toLowerCase();
+  const currentRecipient = recipient.trim().toLowerCase();
+
+  const conversation = messages.filter(
+    (item) =>
+      (item.sender === currentUser &&
+        item.recipient === currentRecipient) ||
+      (item.sender === currentRecipient &&
+        item.recipient === currentUser)
+  );
 
   if (!joined) {
     return (
@@ -62,11 +79,11 @@ export default function App() {
             if (username.trim()) setJoined(true);
           }}
         >
-          <h1>WebSocket Chat</h1>
+          <h1>Private Chat</h1>
           <input
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="Enter your username"
+            placeholder="Choose a username"
             maxLength={30}
             required
           />
@@ -80,20 +97,46 @@ export default function App() {
     <main className="chat">
       <header>
         <div>
-          <h1>Chat Room</h1>
-          <p>Signed in as {username}</p>
+          <h1>Private Chat</h1>
+          <p>You are logged in as {currentUser}</p>
         </div>
-        <span className={connected ? "online" : "offline"}>
-          {connected ? "Connected" : "Connecting..."}
+        <span className={status === "Connected" ? "online" : "offline"}>
+          {status}
         </span>
       </header>
 
+      <label htmlFor="recipient">Chat with</label>
+      <input
+        id="recipient"
+        value={recipient}
+        onChange={(event) => setRecipient(event.target.value)}
+        placeholder="Enter recipient username"
+        maxLength={30}
+      />
+
       <section className="messages">
-        {messages.map((item, index) => (
-          <article className="message" key={index}>
-            <strong>{item.username}</strong>
+        {!currentRecipient && (
+          <p className="empty">Enter a username to start a conversation.</p>
+        )}
+
+        {currentRecipient && conversation.length === 0 && (
+          <p className="empty">
+            No messages with {currentRecipient} yet.
+          </p>
+        )}
+
+        {conversation.map((item, index) => (
+          <article
+            className={
+              item.sender === currentUser ? "message mine" : "message"
+            }
+            key={`${item.timestamp}-${index}`}
+          >
+            <strong>
+              {item.sender === currentUser ? "You" : item.sender}
+            </strong>
             <p>{item.text}</p>
-            <small>{item.timestamp}</small>
+            <small>{new Date(item.timestamp).toLocaleTimeString()}</small>
           </article>
         ))}
       </section>
@@ -102,11 +145,18 @@ export default function App() {
         <input
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Type a message..."
+          placeholder="Type a private message..."
           maxLength={2000}
           required
         />
-        <button type="submit" disabled={!connected}>
+        <button
+          type="submit"
+          disabled={
+            status !== "Connected" ||
+            !currentRecipient ||
+            currentRecipient === currentUser
+          }
+        >
           Send
         </button>
       </form>
